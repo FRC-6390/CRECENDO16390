@@ -1,6 +1,6 @@
 package frc.robot.subsystems;
 
-import com.ctre.phoenix6.Orchestra;
+
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.util.HolonomicPathFollowerConfig;
@@ -8,7 +8,6 @@ import com.pathplanner.lib.util.PIDConstants;
 import com.pathplanner.lib.util.ReplanningConfig;
 
 import edu.wpi.first.math.VecBuilder;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -20,9 +19,7 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.PowerDistribution;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
-import edu.wpi.first.wpilibj.shuffleboard.BuiltInWidgets;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
@@ -35,7 +32,7 @@ import frc.robot.utilities.controlloop.PID;
 import frc.robot.utilities.controlloop.PIDConfig;
 import frc.robot.utilities.swerve.SwerveModule;
 // import frc.robot.utilities.telemetry.SwerveTelemetry;
-import frc.robot.utilities.vission.LimeLight;
+import frc.robot.utilities.vission.LimelightHelpers;
  
 public class Drivetrain6390 extends SubsystemBase{
 
@@ -57,7 +54,6 @@ public class Drivetrain6390 extends SubsystemBase{
   private static PIDConfig driftCorrectionPID = new PIDConfig(5, 0,0).setContinuous(-Math.PI, Math.PI);
   private static Pose2d visionPose;
   private static PID pid;
-  public LimeLight limeLight;
 
   // public static Orchestra orchestra = new Orchestra();
   
@@ -70,9 +66,8 @@ public class Drivetrain6390 extends SubsystemBase{
     VecBuilder.fill(0.1,0.1,Units.degreesToRadians(10)), 
     VecBuilder.fill(5,5,Units.degreesToRadians(500)));
 
-  public Drivetrain6390(LimeLight limelight)
+  public Drivetrain6390()
   {
-    this.limeLight = limelight;
     AutoBuilder.configureHolonomic
     (
       this::getPose,
@@ -229,13 +224,30 @@ SwerveModulePosition[swerveModules.length];
   }
 
   private void updateOdometry(){
+      //ENCODER ODOMETRY
       odometry.update(getRotation2d(), getModulePostions());
       pose = odometry.getPoseMeters();
-      if(limeLight.hasValidTarget())
-      {
-      estimator.addVisionMeasurement(limeLight.getBot2DPosition(), Timer.getFPGATimestamp());
-      }
+
+      //VISION ODOMETRY
       estimator.update(getRotation2d(), getModulePostions());
+      boolean doRejectUpdate = false;
+      LimelightHelpers.SetRobotOrientation("limelight", estimator.getEstimatedPosition().getRotation().getDegrees(), 0, 0, 0, 0, 0);
+      LimelightHelpers.PoseEstimate mt2 = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2("limelight");
+      if(Math.abs(gyro.getRate()) > 720) 
+      {
+        doRejectUpdate = true;
+      }
+      if(mt2.tagCount == 0)
+      {
+        doRejectUpdate = true;
+      }
+      if(!doRejectUpdate)
+      {
+        estimator.setVisionMeasurementStdDevs(VecBuilder.fill(.7,.7,9999999));
+        estimator.addVisionMeasurement(
+            mt2.pose,
+            mt2.timestampSeconds);
+      }
       visionPose = estimator.getEstimatedPosition();
 
 
