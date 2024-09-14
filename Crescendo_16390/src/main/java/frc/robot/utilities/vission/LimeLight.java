@@ -127,7 +127,7 @@ public class LimeLight {
         camtran = limelightTable.getEntry("camtran");
         tid = limelightTable.getEntry("tid");
         json = limelightTable.getEntry("json");
-        botpose = limelightTable.getEntry("botpose");
+        botpose = limelightTable.getEntry("botpose_orb_wpiblue");
         tclass = limelightTable.getEntry("tclass");
         tc = limelightTable.getEntry("tc");
         ledMode = limelightTable.getEntry("ledMode");
@@ -267,6 +267,12 @@ public class LimeLight {
         return poseReal;
     }
 
+    public Double[] getBotPositionRawM2(){
+        Double[] dub = {0.0,0.0,0.0,0.0,0.0,0.0};
+        Double[] poseReal = botpose.getDoubleArray(dub);
+        return poseReal;
+    }
+
     /**
      * Robot transform in field-space. Translation (X,Y,Z) Rotation(X,Y,Z)
      */
@@ -285,6 +291,16 @@ public class LimeLight {
         Rotation2d rotation = new Rotation2d(pose[5]);
         return new Pose2d(translation, rotation);
     }
+
+    public Pose2d getBot2DPositionM2(){
+        Double[] pose = getBotPositionRawM2();
+        if(pose == null) return new Pose2d();
+        Translation2d translation = new Translation2d(pose[1], pose[0]);
+        Rotation2d rotation = new Rotation2d(pose[5]);
+        return new Pose2d(translation, rotation);
+    }
+
+    
 
     /**
      * Class ID of primary neural detector result or neural classifier result
